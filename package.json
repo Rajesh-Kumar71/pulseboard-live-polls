@@ -1,0 +1,23 @@
+{
+  "name": "pulseboard-live-polls",
+  "version": "1.0.0",
+  "description": "PulseBoard is a full-stack live polling and feedback platform built with the MERN stack.",
+  "private": true,
+  "scripts": {
+    "client": "npm run dev --prefix client",
+    "server": "npm run dev --prefix server",
+    "dev": "concurrently \"npm run server\" \"npm run client\""
+  },
+  "keywords": [
+    "mern",
+    "polls",
+    "feedback",
+    "socket.io",
+    "hackathon"
+  ],
+  "author": "Rajesh Kumar",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
