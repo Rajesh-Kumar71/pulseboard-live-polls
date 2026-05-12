@@ -4,6 +4,8 @@ import helmet from "helmet";
 import authRoutes from "./routes/authRoutes.js";
 import { errorHandler, notFound } from "./middleware/errorMiddleware.js";
 import pollRoutes from "./routes/pollRoutes.js";
+import responseRoutes from "./routes/responseRoutes.js";
+
 
 const app = express();
 
@@ -27,6 +29,8 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/polls", pollRoutes);
+app.use("/api/responses", responseRoutes);
+
 
 app.use(notFound);
 app.use(errorHandler);

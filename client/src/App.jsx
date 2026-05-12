@@ -5,6 +5,8 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import CreatePoll from "./pages/CreatePoll";
+import PublicPoll from "./pages/PublicPoll";
+
 
 
 
@@ -15,7 +17,9 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/polls/:slug" element={<PublicPoll />} />
 
+        
         <Route
           path="/dashboard"
           element={
