@@ -17,7 +17,7 @@ function Dashboard() {
         setPolls(response.data.polls);
       } catch (error) {
         setErrorMessage(
-          error.response?.data?.message || "Unable to load your polls"
+          error.response?.data?.message || "Unable to load your polls",
         );
       } finally {
         setIsLoading(false);
@@ -114,7 +114,9 @@ function Dashboard() {
                   </span>
                 </div>
 
-                <p className="helper-text">{poll.description || "No description"}</p>
+                <p className="helper-text">
+                  {poll.description || "No description"}
+                </p>
 
                 <div className="poll-meta">
                   <span>{poll.responseMode}</span>
@@ -134,7 +136,11 @@ function Dashboard() {
                   Copy link
                 </button>
 
+                <Link className="small-ghost-button" to={`/polls/${poll.id}/analytics`}>
+                    Analytics
+                  </Link>
                 <Link className="small-ghost-button" to={`/polls/${poll.slug}`}>
+                  
                   Open
                 </Link>
               </div>

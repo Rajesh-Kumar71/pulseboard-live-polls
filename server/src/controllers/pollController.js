@@ -1,5 +1,7 @@
 import Poll from "../models/Poll.js";
+import Response from "../models/Response.js";
 import { createSlug } from "../utils/createSlug.js";
+
 
 function cleanQuestion(question) {
   return {
@@ -156,5 +158,90 @@ export async function getPublicPoll(req, res) {
   res.status(200).json({
     ok: true,
     poll: getSafePublicPoll(poll),
+  });
+}
+
+export async function getPollAnalytics(req, res) {
+  const poll = await Poll.findOne({
+    _id: req.params.pollId,
+    creator: req.user._id,
+  });
+
+  if (!poll) {
+    return res.status(404).json({
+      ok: false,
+      message: "Poll not found",
+    });
+  }
+
+  const responses = await Response.find({ poll: poll._id }).lean();
+  const totalResponses = responses.length;
+
+  const questionSummaries = poll.questions.map((question) => {
+    const optionCounts = question.options.map((option) => {
+      const count = responses.reduce((total, response) => {
+        const matchedAnswer = response.answers.find(
+          (answer) =>
+            String(answer.questionId) === String(question._id) &&
+            String(answer.selectedOptionId) === String(option._id)
+        );
+
+        return matchedAnswer ? total + 1 : total;
+      }, 0);
+
+      const percentage =
+        totalResponses === 0 ? 0 : Math.round((count / totalResponses) * 100);
+
+      return {
+        optionId: option._id,
+        text: option.text,
+        count,
+        percentage,
+      };
+    });
+
+    const answeredCount = responses.reduce((total, response) => {
+      const hasAnswer = response.answers.some(
+        (answer) => String(answer.questionId) === String(question._id)
+      );
+
+      return hasAnswer ? total + 1 : total;
+    }, 0);
+
+    return {
+      questionId: question._id,
+      text: question.text,
+      isRequired: question.isRequired,
+      answeredCount,
+      skippedCount: totalResponses - answeredCount,
+      options: optionCounts,
+    };
+  });
+
+  res.status(200).json({
+    ok: true,
+    analytics: {
+      poll: {
+        id: poll._id,
+        title: poll.title,
+        description: poll.description,
+        slug: poll.slug,
+        responseMode: poll.responseMode,
+        expiresAt: poll.expiresAt,
+        status: poll.isExpired() ? "expired" : poll.status,
+        isPublished: poll.isPublished,
+        questionCount: poll.questions.length,
+      },
+      totalResponses,
+      participation: {
+        anonymousResponses: responses.filter(
+          (response) => response.respondentType === "anonymous"
+        ).length,
+        authenticatedResponses: responses.filter(
+          (response) => response.respondentType === "authenticated"
+        ).length,
+      },
+      questions: questionSummaries,
+    },
   });
 }

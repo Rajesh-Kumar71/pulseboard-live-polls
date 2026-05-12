@@ -1,3 +1,4 @@
+import PollAnalytics from "./pages/PollAnalytics";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
@@ -8,8 +9,6 @@ import CreatePoll from "./pages/CreatePoll";
 import PublicPoll from "./pages/PublicPoll";
 
 
-
-
 function App() {
   return (
     <BrowserRouter>
@@ -17,9 +16,9 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/polls/:slug" element={<PublicPoll />} />
-
         
+       
+
         <Route
           path="/dashboard"
           element={
@@ -29,7 +28,7 @@ function App() {
           }
         />
 
-          <Route
+        <Route
           path="/polls/new"
           element={
             <ProtectedRoute>
@@ -37,6 +36,17 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+         <Route
+          path="/polls/:pollId/analytics"
+          element={
+            <ProtectedRoute>
+              <PollAnalytics />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="/polls/:slug" element={<PublicPoll />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
