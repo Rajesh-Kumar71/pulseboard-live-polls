@@ -7,7 +7,9 @@ function PollAnalytics() {
 
   const [analytics, setAnalytics] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [publishMessage, setPublishMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   useEffect(() => {
     async function loadAnalytics() {
@@ -25,6 +27,34 @@ function PollAnalytics() {
 
     loadAnalytics();
   }, [pollId]);
+
+  async function handlePublishResults() {
+    setErrorMessage("");
+    setPublishMessage("");
+
+    try {
+      setIsPublishing(true);
+
+      const response = await api.patch(`/api/polls/${pollId}/publish`);
+
+      setAnalytics((current) => ({
+        ...current,
+        poll: {
+          ...current.poll,
+          status: response.data.poll.status,
+          isPublished: response.data.poll.isPublished,
+        },
+      }));
+
+      setPublishMessage(response.data.message);
+    } catch (error) {
+      setErrorMessage(
+        error.response?.data?.message || "Unable to publish results"
+      );
+    } finally {
+      setIsPublishing(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -72,12 +102,33 @@ function PollAnalytics() {
             <div>
               <p className="eyebrow">Overview</p>
               <h1>{poll.title}</h1>
-              {poll.description && <p className="subtitle">{poll.description}</p>}
+              {poll.description && (
+                <p className="subtitle">{poll.description}</p>
+              )}
             </div>
 
-            <span className={`status-pill status-${poll.status}`}>
-              {poll.status}
-            </span>
+            <div className="analytics-actions">
+              <span className={`status-pill status-${poll.status}`}>
+                {poll.status}
+              </span>
+
+              {!poll.isPublished && (
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={handlePublishResults}
+                  disabled={isPublishing}
+                >
+                  {isPublishing ? "Publishing..." : "Publish results"}
+                </button>
+              )}
+
+              {poll.isPublished && (
+                <Link className="secondary-button" to={`/polls/${poll.slug}`}>
+                  View public results
+                </Link>
+              )}
+            </div>
           </div>
 
           <div className="poll-meta">
@@ -87,13 +138,30 @@ function PollAnalytics() {
           </div>
         </article>
 
+        {publishMessage && (
+          <article className="success-card wide-card">
+            <p className="eyebrow">Published</p>
+            <h3>{publishMessage}</h3>
+            <p className="helper-text">
+              Public visitors can now view the final results using the same poll
+              link.
+            </p>
+          </article>
+        )}
+
+        {errorMessage && (
+          <article className="form-error wide-card">{errorMessage}</article>
+        )}
+
         <article className="dashboard-card">
           <span className="metric-value">{totalResponses}</span>
           <p className="metric-label">Total responses</p>
         </article>
 
         <article className="dashboard-card">
-          <span className="metric-value">{participation.anonymousResponses}</span>
+          <span className="metric-value">
+            {participation.anonymousResponses}
+          </span>
           <p className="metric-label">Anonymous responses</p>
         </article>
 
@@ -107,7 +175,10 @@ function PollAnalytics() {
 
       <section className="analytics-list">
         {questions.map((question, index) => (
-          <article className="dashboard-card analytics-question" key={question.questionId}>
+          <article
+            className="dashboard-card analytics-question"
+            key={question.questionId}
+          >
             <div className="question-title-row">
               <div>
                 <p className="eyebrow">Question {index + 1}</p>

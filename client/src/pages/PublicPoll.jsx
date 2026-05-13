@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
+import PublicResults from "./PublicResults";
 
 function PublicPoll() {
   const { slug } = useParams();
   const { isLoggedIn } = useAuth();
 
   const [poll, setPoll] = useState(null);
+  const [publishedResults, setPublishedResults] = useState(null);
   const [answers, setAnswers] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -19,7 +21,16 @@ function PublicPoll() {
     async function loadPoll() {
       try {
         const response = await api.get(`/api/polls/public/${slug}`);
-        setPoll(response.data.poll);
+        const publicPoll = response.data.poll;
+
+        setPoll(publicPoll);
+
+        if (publicPoll.isPublished) {
+          const resultsResponse = await api.get(
+            `/api/polls/public/${slug}/results`,
+          );
+          setPublishedResults(resultsResponse.data.results);
+        }
       } catch (error) {
         setErrorMessage(error.response?.data?.message || "Unable to load poll");
       } finally {
@@ -61,10 +72,12 @@ function PublicPoll() {
     }
 
     const payload = {
-      answers: Object.entries(answers).map(([questionId, selectedOptionId]) => ({
-        questionId,
-        selectedOptionId,
-      })),
+      answers: Object.entries(answers).map(
+        ([questionId, selectedOptionId]) => ({
+          questionId,
+          selectedOptionId,
+        }),
+      ),
     };
 
     try {
@@ -76,7 +89,7 @@ function PublicPoll() {
       setTotalResponses(response.data.totalResponses);
     } catch (error) {
       setErrorMessage(
-        error.response?.data?.message || "Unable to submit response"
+        error.response?.data?.message || "Unable to submit response",
       );
     } finally {
       setIsSubmitting(false);
@@ -92,6 +105,10 @@ function PublicPoll() {
         </section>
       </main>
     );
+  }
+
+  if (publishedResults) {
+    return <PublicResults results={publishedResults} />;
   }
 
   if (!poll) {
@@ -150,7 +167,7 @@ function PublicPoll() {
           </section>
         )}
 
-        {!isExpired && !needsLogin && !successMessage && (
+        {!poll.isPublished && !isExpired && !needsLogin && !successMessage && (
           <form className="public-response-form" onSubmit={handleSubmit}>
             {poll.questions.map((question, questionIndex) => (
               <section className="question-card" key={question._id}>

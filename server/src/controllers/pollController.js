@@ -2,7 +2,6 @@ import Poll from "../models/Poll.js";
 import Response from "../models/Response.js";
 import { createSlug } from "../utils/createSlug.js";
 
-
 function cleanQuestion(question) {
   return {
     _id: question._id,
@@ -161,19 +160,7 @@ export async function getPublicPoll(req, res) {
   });
 }
 
-export async function getPollAnalytics(req, res) {
-  const poll = await Poll.findOne({
-    _id: req.params.pollId,
-    creator: req.user._id,
-  });
-
-  if (!poll) {
-    return res.status(404).json({
-      ok: false,
-      message: "Poll not found",
-    });
-  }
-
+async function buildPollAnalytics(poll) {
   const responses = await Response.find({ poll: poll._id }).lean();
   const totalResponses = responses.length;
 
@@ -183,7 +170,7 @@ export async function getPollAnalytics(req, res) {
         const matchedAnswer = response.answers.find(
           (answer) =>
             String(answer.questionId) === String(question._id) &&
-            String(answer.selectedOptionId) === String(option._id)
+            String(answer.selectedOptionId) === String(option._id),
         );
 
         return matchedAnswer ? total + 1 : total;
@@ -202,7 +189,7 @@ export async function getPollAnalytics(req, res) {
 
     const answeredCount = responses.reduce((total, response) => {
       const hasAnswer = response.answers.some(
-        (answer) => String(answer.questionId) === String(question._id)
+        (answer) => String(answer.questionId) === String(question._id),
       );
 
       return hasAnswer ? total + 1 : total;
@@ -218,30 +205,105 @@ export async function getPollAnalytics(req, res) {
     };
   });
 
+  return {
+    poll: {
+      id: poll._id,
+      title: poll.title,
+      description: poll.description,
+      slug: poll.slug,
+      responseMode: poll.responseMode,
+      expiresAt: poll.expiresAt,
+      status: poll.isExpired() ? "expired" : poll.status,
+      isPublished: poll.isPublished,
+      questionCount: poll.questions.length,
+    },
+    totalResponses,
+    participation: {
+      anonymousResponses: responses.filter(
+        (response) => response.respondentType === "anonymous",
+      ).length,
+      authenticatedResponses: responses.filter(
+        (response) => response.respondentType === "authenticated",
+      ).length,
+    },
+    questions: questionSummaries,
+  };
+}
+
+export async function getPollAnalytics(req, res) {
+  const poll = await Poll.findOne({
+    _id: req.params.pollId,
+    creator: req.user._id,
+  });
+
+  if (!poll) {
+    return res.status(404).json({
+      ok: false,
+      message: "Poll not found",
+    });
+  }
+
+  const analytics = await buildPollAnalytics(poll);
+
   res.status(200).json({
     ok: true,
-    analytics: {
-      poll: {
-        id: poll._id,
-        title: poll.title,
-        description: poll.description,
-        slug: poll.slug,
-        responseMode: poll.responseMode,
-        expiresAt: poll.expiresAt,
-        status: poll.isExpired() ? "expired" : poll.status,
-        isPublished: poll.isPublished,
-        questionCount: poll.questions.length,
-      },
-      totalResponses,
-      participation: {
-        anonymousResponses: responses.filter(
-          (response) => response.respondentType === "anonymous"
-        ).length,
-        authenticatedResponses: responses.filter(
-          (response) => response.respondentType === "authenticated"
-        ).length,
-      },
-      questions: questionSummaries,
+    analytics,
+  });
+}
+
+export async function publishPollResults(req, res) {
+  const poll = await Poll.findOne({
+    _id: req.params.pollId,
+    creator: req.user._id,
+  });
+
+  if (!poll) {
+    return res.status(404).json({
+      ok: false,
+      message: "Poll not found",
+    });
+  }
+
+  poll.isPublished = true;
+  poll.status = "published";
+
+  await poll.save();
+
+  res.status(200).json({
+    ok: true,
+    message: "Poll results published successfully",
+    poll: {
+      id: poll._id,
+      title: poll.title,
+      slug: poll.slug,
+      status: poll.status,
+      isPublished: poll.isPublished,
     },
   });
 }
+
+export async function getPublicPollResults(req, res) {
+  const poll = await Poll.findOne({ slug: req.params.slug });
+
+  if (!poll) {
+    return res.status(404).json({
+      ok: false,
+      message: "Poll not found",
+    });
+  }
+
+  if (!poll.isPublished) {
+    return res.status(403).json({
+      ok: false,
+      message: "Results are not published yet",
+    });
+  }
+
+  const analytics = await buildPollAnalytics(poll);
+
+  res.status(200).json({
+    ok: true,
+    results: analytics,
+  });
+}
+
