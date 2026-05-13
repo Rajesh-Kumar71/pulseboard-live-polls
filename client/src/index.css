@@ -653,3 +653,20 @@ h2 {
     flex-direction: column;
   }
 }
+
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #67e8f9;
+  font-weight: 700;
+}
+
+.live-pill::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #06b6d4;
+  box-shadow: 0 0 16px #06b6d4;
+}

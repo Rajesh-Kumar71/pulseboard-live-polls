@@ -1,5 +1,6 @@
 import Poll from "../models/Poll.js";
 import Response from "../models/Response.js";
+import { getIO } from "../sockets/socketServer.js";
 
 function validateAnswers(poll, answers) {
   if (!Array.isArray(answers)) {
@@ -26,7 +27,7 @@ function validateAnswers(poll, answers) {
 
     if (selectedOptionId) {
       const optionExists = question.options.some(
-        (option) => String(option._id) === selectedOptionId
+        (option) => String(option._id) === selectedOptionId,
       );
 
       if (!optionExists) {
@@ -39,7 +40,9 @@ function validateAnswers(poll, answers) {
 }
 
 function cleanAnswers(poll, answers) {
-  const questionIds = new Set(poll.questions.map((question) => String(question._id)));
+  const questionIds = new Set(
+    poll.questions.map((question) => String(question._id)),
+  );
 
   return answers
     .filter((answer) => questionIds.has(String(answer.questionId)))
@@ -106,6 +109,19 @@ export async function submitResponse(req, res) {
   });
 
   const totalResponses = await Response.countDocuments({ poll: poll._id });
+
+  const io = getIO();
+
+  if (io) {
+    io.to(`poll:${poll._id}`).emit("poll:response-submitted", {
+      pollId: String(poll._id),
+      totalResponses,
+    });
+
+    io.to(`poll:${poll._id}`).emit("poll:analytics-updated", {
+      pollId: String(poll._id),
+    });
+  }
 
   res.status(201).json({
     ok: true,

@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import PublicResults from "./PublicResults";
+import socket from "../sockets/socket";
 
 function PublicPoll() {
   const { slug } = useParams();
@@ -16,6 +17,7 @@ function PublicPoll() {
   const [totalResponses, setTotalResponses] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [liveResponseCount, setLiveResponseCount] = useState(null);
 
   useEffect(() => {
     async function loadPoll() {
@@ -40,6 +42,27 @@ function PublicPoll() {
 
     loadPoll();
   }, [slug]);
+
+  useEffect(() => {
+    if (!poll?.id) {
+      return;
+    }
+
+    socket.connect();
+    socket.emit("poll:join", poll.id);
+
+    function handleResponseSubmitted(event) {
+      if (event.pollId === poll.id) {
+        setLiveResponseCount(event.totalResponses);
+      }
+    }
+
+    socket.on("poll:response-submitted", handleResponseSubmitted);
+
+    return () => {
+      socket.off("poll:response-submitted", handleResponseSubmitted);
+    };
+  }, [poll?.id]);
 
   function handleOptionChange(questionId, optionId) {
     setAnswers((current) => ({
@@ -146,6 +169,7 @@ function PublicPoll() {
         <div className="poll-meta public-meta">
           <span>{poll.responseMode} responses</span>
           <span>Expires: {new Date(poll.expiresAt).toLocaleString()}</span>
+          <span className="live-pill">Live updates on</span>
         </div>
 
         {isExpired && (
@@ -216,9 +240,9 @@ function PublicPoll() {
           <section className="success-card">
             <p className="eyebrow">Submitted</p>
             <h3>{successMessage}</h3>
-            {totalResponses !== null && (
+            {(liveResponseCount !== null || totalResponses !== null) && (
               <p className="helper-text">
-                Total responses collected: {totalResponses}
+                Total responses collected: {liveResponseCount ?? totalResponses}
               </p>
             )}
             <Link className="secondary-button" to="/">

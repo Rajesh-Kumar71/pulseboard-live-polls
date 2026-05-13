@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import api from "../api/axios";
+import socket from "../sockets/socket";
 
 function PollAnalytics() {
   const { pollId } = useParams();
@@ -11,22 +12,47 @@ function PollAnalytics() {
   const [isLoading, setIsLoading] = useState(true);
   const [isPublishing, setIsPublishing] = useState(false);
 
+  async function loadAnalytics({ silent = false } = {}) {
+    try {
+      if (!silent) {
+        setIsLoading(true);
+      }
+
+      const response = await api.get(`/api/polls/${pollId}/analytics`);
+      setAnalytics(response.data.analytics);
+    } catch (error) {
+      setErrorMessage(
+        error.response?.data?.message || "Unable to load analytics",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   useEffect(() => {
-    async function loadAnalytics() {
-      try {
-        const response = await api.get(`/api/polls/${pollId}/analytics`);
-        setAnalytics(response.data.analytics);
-      } catch (error) {
-        setErrorMessage(
-          error.response?.data?.message || "Unable to load analytics"
-        );
-      } finally {
-        setIsLoading(false);
+    loadAnalytics();
+  }, [pollId]);
+
+  useEffect(() => {
+    if (!analytics?.poll?.id) {
+      return;
+    }
+
+    socket.connect();
+    socket.emit("poll:join", analytics.poll.id);
+
+    function handleAnalyticsUpdate(event) {
+      if (event.pollId === analytics.poll.id) {
+        loadAnalytics({ silent: true });
       }
     }
 
-    loadAnalytics();
-  }, [pollId]);
+    socket.on("poll:analytics-updated", handleAnalyticsUpdate);
+
+    return () => {
+      socket.off("poll:analytics-updated", handleAnalyticsUpdate);
+    };
+  }, [analytics?.poll?.id]);
 
   async function handlePublishResults() {
     setErrorMessage("");
@@ -49,7 +75,7 @@ function PollAnalytics() {
       setPublishMessage(response.data.message);
     } catch (error) {
       setErrorMessage(
-        error.response?.data?.message || "Unable to publish results"
+        error.response?.data?.message || "Unable to publish results",
       );
     } finally {
       setIsPublishing(false);
