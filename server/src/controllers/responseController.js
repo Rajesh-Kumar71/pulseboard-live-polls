@@ -1,6 +1,7 @@
 import Poll from "../models/Poll.js";
 import Response from "../models/Response.js";
 import { getIO } from "../sockets/socketServer.js";
+import { buildPollAnalytics } from "./pollController.js";
 
 function validateAnswers(poll, answers) {
   if (!Array.isArray(answers)) {
@@ -113,6 +114,8 @@ export async function submitResponse(req, res) {
   const io = getIO();
 
   if (io) {
+    const analytics = await buildPollAnalytics(poll);
+
     io.to(`poll:${poll._id}`).emit("poll:response-submitted", {
       pollId: String(poll._id),
       totalResponses,
@@ -120,6 +123,7 @@ export async function submitResponse(req, res) {
 
     io.to(`poll:${poll._id}`).emit("poll:analytics-updated", {
       pollId: String(poll._id),
+      analytics,
     });
   }
 

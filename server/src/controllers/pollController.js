@@ -160,7 +160,7 @@ export async function getPublicPoll(req, res) {
   });
 }
 
-async function buildPollAnalytics(poll) {
+export async function buildPollAnalytics(poll) {
   const responses = await Response.find({ poll: poll._id }).lean();
   const totalResponses = responses.length;
 

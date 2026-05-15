@@ -42,8 +42,8 @@ function PollAnalytics() {
     socket.emit("poll:join", analytics.poll.id);
 
     function handleAnalyticsUpdate(event) {
-      if (event.pollId === analytics.poll.id) {
-        loadAnalytics({ silent: true });
+      if (event.pollId === analytics.poll.id && event.analytics) {
+        setAnalytics(event.analytics);
       }
     }
 
@@ -51,6 +51,7 @@ function PollAnalytics() {
 
     return () => {
       socket.off("poll:analytics-updated", handleAnalyticsUpdate);
+      socket.disconnect();
     };
   }, [analytics?.poll?.id]);
 

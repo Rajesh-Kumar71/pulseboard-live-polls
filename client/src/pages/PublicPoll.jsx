@@ -61,6 +61,7 @@ function PublicPoll() {
 
     return () => {
       socket.off("poll:response-submitted", handleResponseSubmitted);
+      socket.disconnect();
     };
   }, [poll?.id]);
 
