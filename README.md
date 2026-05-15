@@ -4,14 +4,10 @@ PulseBoard is a production-minded MERN stack platform for creating live polls, s
 
 This project was built for the **Web Dev Cohort 2026 Hackathon**.
 
-## Live Demo
-
-Frontend: _Add Vercel deployed link here_  
-Backend API: _Add Render deployed link here_
 
 ## Repository
 
-GitHub: _Add public GitHub repository link here_
+GitHub: https://github.com/Rajesh-Kumar71/pulseboard-live-polls
 
 ## Features
 
